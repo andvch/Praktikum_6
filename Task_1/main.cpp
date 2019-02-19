@@ -70,7 +70,9 @@ int main(int argc, char **argv) {
 //	for (int i = 0; i < (1 << n); ++i) cout << A[i] << endl;
 //	for (int i = 0; i < (1 << n); ++i) cout << B[i] << endl;
 	
-	cout << omp_get_wtime() - t << endl;
+	cout << '~' << n << '\t' << k << '\t' << getenv("OMP_NUM_THREADS") << '\t' << omp_get_wtime() - t << endl;
+	free(A);
+	free(B);
 	return 0;
 	
 }
