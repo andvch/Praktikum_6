@@ -15,7 +15,7 @@ complexd* gen(int n) {
 	
 	double module = 0;
 	unsigned int seed = omp_get_wtime();
-	#pragma omp parallel shared(A, m) firstprivate(seed, i) reduction(+: module)
+	#pragma omp parallel shared(A, m) firstprivate(seed) private(i) reduction(+: module)
 	{
 		seed += omp_get_thread_num();
 		#pragma omp for
@@ -25,7 +25,10 @@ complexd* gen(int n) {
 			module += abs(A[i]*A[i]);
 		}
 	}
-	for (i = 0; i < m; ++i) A[i] /= sqrt(module);
+	module = sqrt(module);
+	
+	#pragma omp for
+	for (i = 0; i < m; ++i) A[i] /= module;
 	
 	return A;
 	
@@ -36,7 +39,7 @@ complexd* f(complexd *A, int n, complexd *P, int k) {
 	unsigned long long i, m = 1LLU << n, l = 1LLU << (n - k);
 	complexd *B = new complexd[m];
 	
-	#pragma omp parallel shared(A, B, P, n, k, m, l) private(i)
+	#pragma omp parallel shared(A, B, P, m, l) private(i)
 	{
 		#pragma omp for
 		for (i = 0; i < m; ++i)
@@ -58,10 +61,12 @@ int main(int argc, char **argv) {
 	n = atoi(argv[1]);
 	k = atoi(argv[2]);
 	
-	double t = omp_get_wtime();
+	double t0 = omp_get_wtime();
 	complexd *A = gen(n);
+	double t1 = omp_get_wtime();
 	complexd P[] = {1/sqrt(2), 1/sqrt(2), 1/sqrt(2), -1/sqrt(2)};
 	complexd *B = f(A, n, P, k);
+	double t2 = omp_get_wtime();
 	
 	/*
 	unsigned long long i, m = 1LLU << n;
@@ -70,7 +75,7 @@ int main(int argc, char **argv) {
 	for (i = 0; i < m; ++i) cout << B[i] << endl;
 	*/
 	
-	cout << '~' << n << '\t' << k << '\t' << getenv("OMP_NUM_THREADS") << '\t' << omp_get_wtime() - t << endl;
+	cout << '~' << n << '\t' << k << '\t' << getenv("OMP_NUM_THREADS") << '\t' << t1 - t0 << '\t' << t2 - t1 << endl;
 	free(A);
 	free(B);
 	return 0;
