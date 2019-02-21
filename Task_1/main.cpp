@@ -27,7 +27,7 @@ complexd* gen(int n) {
 	}
 	module = sqrt(module);
 	
-	#pragma omp for
+	#pragma omp parallel for
 	for (i = 0; i < m; ++i) A[i] /= module;
 	
 	return A;
