@@ -18,7 +18,7 @@ complexd* gen(int n) {
 	#pragma omp parallel shared(A, m) firstprivate(seed) private(i) reduction(+: module)
 	{
 		seed += omp_get_thread_num();
-		#pragma omp for
+		#pragma omp for schedule(guided)
 		for (i = 0; i < m; ++i) {
 			A[i].real() = ((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
 			A[i].imag() = ((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
@@ -27,7 +27,7 @@ complexd* gen(int n) {
 	}
 	module = sqrt(module);
 	
-	#pragma omp parallel for
+	#pragma omp parallel for schedule(guided)
 	for (i = 0; i < m; ++i) A[i] /= module;
 	
 	return A;
@@ -41,7 +41,7 @@ complexd* f(complexd *A, int n, complexd *P, int k) {
 	
 	#pragma omp parallel shared(A, B, P, m, l) private(i)
 	{
-		#pragma omp for
+		#pragma omp for schedule(guided)
 		for (i = 0; i < m; ++i)
 			B[i] = ((i & l) == 0) ? P[0]*A[i & ~l] + P[1]*A[i | l] : P[2]*A[i & ~l] + P[3]*A[i | l];
 	}
