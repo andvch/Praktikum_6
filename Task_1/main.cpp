@@ -20,8 +20,8 @@ complexd* gen(int n) {
 		seed += omp_get_thread_num();
 		#pragma omp for schedule(guided)
 		for (i = 0; i < m; ++i) {
-			A[i].real() = ((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
-			A[i].imag() = ((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
+			A[i].real((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
+			A[i].imag((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
 			module += abs(A[i]*A[i]);
 		}
 	}
