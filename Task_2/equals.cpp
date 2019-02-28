@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 		f2.read((char*)&y, 2*sizeof(double));
 		if ((abs(x[0]-y[0]) > epsilon) or (abs(x[1]-y[1]) > epsilon)) {
 			cout << '0' << endl;
-			cout << i << "): " << scientific << x[0] << " ; " << x[1] << " != " << y[0] << " ; " << y[1] << endl;
+			cout << i << "): " << scientific << x[0] << " + i* " << x[1] << " != " << y[0] << " + i* " << y[1] << endl;
 			f1.close(); f2.close(); return 0;
 		}
 	}
