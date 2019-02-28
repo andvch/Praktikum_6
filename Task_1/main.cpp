@@ -75,7 +75,8 @@ int main(int argc, char **argv) {
 	for (i = 0; i < m; ++i) cout << B[i] << endl;
 	*/
 	
-	cout << '~' << n << '\t' << k << '\t' << getenv("OMP_NUM_THREADS") << '\t' << t1 - t0 << '\t' << t2 - t1 << endl;
+	char* x = getenv("OMP_NUM_THREADS");
+	cout << '~' << n << '\t' << k << '\t' << ((x != NULL) ? x : "1") << '\t' << t1 - t0 << '\t' << t2 - t1 << endl;
 	free(A);
 	free(B);
 	return 0;
