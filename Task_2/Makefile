@@ -1,22 +1,26 @@
 SHELL := /bin/bash
 #MAKEFLAGS += --silent
-n := 4
+N := 25 26 27 28
+K := 01 13
+I := 01 02 04 08
+G := 08
 
 all: main generate print equals
 main: main.cpp
-	mpicxx $^ -o $@ -O3
+	mpicxx $^ -o $@
 generate: generate.cpp
-	mpicxx $^ -o $@ -O3
+	mpicxx $^ -o $@
 .cpp:
 	g++ $^ -o $@
-%.dat: generate
-	./generate $(n) $@
+vec: generate
+	for n in $(N); do \
+		mpisubmit.pl -p $(G) -w 00:15 --stdout out_gen --stderr err_gen ./generate -- $$n v_$$n.dat ; \
+	done
 submit: main
-	for n in 24 28 30; do \
-		make n=$$n v_$$n.dat; \
-		for k in 01 13 $$n; do \
-			for i in 01 02 04 08; do \
-				mpisubmit.bg -p $$i -w 00:05 --stdout out_$$k-$$n-$$i --stderr err_$$k-$$n-$$i ./main -- $$k v_$$n.dat ; \
+	for n in $(N); do \
+		for k in $(K) $$n; do \
+			for i in $(I); do \
+				mpisubmit.pl -p $$i -w 00:15 --stdout out_$$k-$$n-$$i --stderr err_$$k-$$n-$$i ./main -- $$k v_$$n.dat ; \
 			done \
 		done \
 	done
