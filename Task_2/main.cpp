@@ -10,6 +10,30 @@ typedef complex<double> complexd;
 int rank, size, s, n;
 unsigned long long m, i;
 
+complexd* gen() {
+	
+	if (s > n) {
+		if (!rank) cout << "Too many processes for this vector" << endl;
+		MPI_Abort(MPI_COMM_WORLD, MPI_ERR_OTHER);
+	}
+	m = 1LLU << (n - s);
+	complexd *A = new complexd[m];
+	
+	double sqr = 0, module;
+	unsigned int seed = time(0) + rank;
+	for (i = 0; i < m; ++i) {
+		A[i].real((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
+		A[i].imag((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
+		sqr += abs(A[i]*A[i]);
+	}
+	MPI_Reduce(&sqr, &module, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	module = sqrt(module);
+	MPI_Bcast(&module, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	for (i = 0; i < m; ++i) A[i] /= module;
+	return A;
+
+}
+
 complexd* read(char *f) {
 	
 	MPI_File file;
@@ -103,11 +127,12 @@ int main(int argc, char **argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	
 	if (argc < 3) {
-		if (!rank) cout << argv[0] << " k in [out]" << endl;
+		if (!rank) cout << argv[0] << " n k [in] [out]" << endl;
 		MPI_Finalize();
 		return 0;
 	}
-	int k = atoi(argv[1]);
+	n = atoi(argv[1]);
+	int k = atoi(argv[2]);
 	
 	s = 0;
 	while (!((size >> s) & 1)) ++s;
@@ -121,7 +146,7 @@ int main(int argc, char **argv) {
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	time[0] = MPI_Wtime();
-	complexd *A = read(argv[2]);
+	complexd *A = (argc > 3) ? read(argv[3]) : gen();
 	time[0] = MPI_Wtime() - time[0];
 	
 	complexd P[] = {1/sqrt(2), 1/sqrt(2), 1/sqrt(2), -1/sqrt(2)};
@@ -132,7 +157,7 @@ int main(int argc, char **argv) {
 	time[1] = MPI_Wtime() - time[1];
 	free(A);
 	
-	if (argc > 3) write(argv[3], B);
+	if (argc > 4) write(argv[4], B);
 	free(B);
 	
 	MPI_Reduce(time, timeMAX, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
