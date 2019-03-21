@@ -9,9 +9,6 @@ using namespace std;
 typedef complex<double> complexd;
 typedef unsigned long long uint64;
 
-#pragma omp declare reduction(+: complexd: omp_out += omp_in) \
-	initializer(omp_priv = omp_orig)
-
 static int rank, size, log_size, threads;
 
 void get_num_threads(int *n)
@@ -39,10 +36,10 @@ complexd* gen(int n)
 	uint64 m = num_of_doubles(n);
 	complexd *A = new complexd[m];
 	double sqr = 0, module;
-	unsigned int seed = time(0) + rank * threads;
-	#pragma omp parallel shared(A, m) firstprivate(seed) reduction(+: sqr)
+	#pragma omp parallel reduction(+: sqr)
 	{
-		seed += omp_get_thread_num();
+		unsigned int seed = time(0) + rank * threads +
+			omp_get_thread_num();
 		#pragma omp for schedule(guided)
 		for (uint64 i = 0; i < m; ++i) {
 			A[i].real((rand_r(&seed) / (float) RAND_MAX) - 0.5f);
@@ -54,9 +51,10 @@ complexd* gen(int n)
 	if (!rank)
 		module = sqrt(module);
 	MPI_Bcast(&module, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	#pragma omp parallel for schedule(guided) shared(A, m, module)
-	for (uint64 i = 0; i < m; ++i)
+	#pragma omp parallel for schedule(guided)
+	for (uint64 i = 0; i < m; ++i) {
 		A[i] /= module;
+	}
 	return A;
 }
 
@@ -87,33 +85,33 @@ complexd* read(char *f, int *n)
 	return A;
 }
 
-complexd *quant(complexd *A, complexd *P, int n, int k)
+complexd *quant(complexd *A, complexd *B, int n, int k, complexd *P, complexd *BUF)
 {
 	uint64 m = num_of_doubles(n);
-	complexd *B = new complexd[m];
 	if (k > log_size) {
 		uint64 l = 1LLU << (n - k);
-		#pragma omp parallel for schedule(guided) shared(A, B, P, m, l)
-		for (uint64 i = 0; i < m; ++i)
+		#pragma omp parallel for schedule(guided)
+		for (uint64 i = 0; i < m; ++i) {
 			B[i] = ((i & l) == 0) ?
 				P[0]*A[i & ~l] + P[1]*A[i | l] :
 				P[2]*A[i & ~l] + P[3]*A[i | l];
+		}
 	} else {
-		complexd *A1 = new complexd[m];
 		int rank1 = rank ^ (1LLU << (log_size - k));
 		MPI_Sendrecv(A, m, MPI_DOUBLE_COMPLEX, rank1, 0,
-			A1, m, MPI_DOUBLE_COMPLEX, rank1, 0,
+			BUF, m, MPI_DOUBLE_COMPLEX, rank1, 0,
 			MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		if (rank < rank1) {
-			#pragma omp parallel for schedule(guided) shared(A, A1, B, P, m)
-			for (uint64 i = 0; i < m; ++i)
-				B[i] = P[0]*A[i] + P[1]*A1[i];
+			#pragma omp parallel for schedule(guided)
+			for (uint64 i = 0; i < m; ++i) {
+				B[i] = P[0]*A[i] + P[1]*BUF[i];
+			}
 		} else {
-			#pragma omp parallel for schedule(guided) shared(A, A1, B, P, m)
-			for (uint64 i = 0; i < m; ++i)
-				B[i] = P[2]*A1[i] + P[3]*A[i];
+			#pragma omp parallel for schedule(guided)
+			for (uint64 i = 0; i < m; ++i) {
+				B[i] = P[2]*BUF[i] + P[3]*A[i];
+			}
 		}
-		free(A1);
 	}
 	return B;
 }
@@ -127,13 +125,17 @@ double normal_dis_gen(unsigned int *seed)
 	return S-6.;
 }
 
-
 complexd *adam(complexd *A, int n, double e)
 {
-	complexd P[4];
-	complexd *B = A, *C;
+	uint64 m = num_of_doubles(n);
+	complexd *B = new complexd[m], *C = new complexd[m], *T,
+		*buf = new complexd[m], P[4];
+	#pragma omp parallel for schedule(guided)
+	for (uint64 i = 0; i < m; ++i) {
+		B[i] = A[i];
+	}
 	double t;
-	unsigned int seed = time(0) + rank;
+	unsigned int seed = time(0);
 	for (int k = 1; k <= n; ++k) {
 		if (!rank) {
 			t = normal_dis_gen(&seed);
@@ -142,24 +144,33 @@ complexd *adam(complexd *A, int n, double e)
 			P[3] = -P[0];
 		}
 		MPI_Bcast(P, 4, MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
-		C = quant(B, P, n, k);
-		if (B != A)
-			free(B);
+		quant(B, C, n, k, P, buf);
+		T = B;
 		B = C;
+		C = T;
 	}
-	return C;
+	free(C);
+	free(buf);
+	return B;
 }
 
 complexd dot(complexd *A, complexd *B, int n)
 {
 	uint64 m = num_of_doubles(n);
 	complexd x(0.0, 0.0), y(0.0, 0.0);
-	#pragma omp parallel for shared(A ,B, m) reduction(+: x)
-	for (uint64 i = 0; i < m; ++i)
-		x += A[i] * conj(B[i]);
-	MPI_Reduce(&x, &y, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD);
-	MPI_Bcast(&y, 1, MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
-	return y;
+	#pragma omp parallel
+	{
+		complexd z(0.0, 0.0);
+		#pragma omp for schedule(guided)
+		for (uint64 i = 0; i < m; ++i) {
+			z += conj(A[i]) * B[i];
+		}
+		#pragma omp critical
+		y += z;
+	}
+	MPI_Reduce(&y, &x, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&x, 1, MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
+	return x;
 }
 
 void write(char *f, complexd *B, int n)
@@ -204,7 +215,7 @@ int init(int argc, char **argv, int *n, double *e)
 	}
 	if (argc < 3) {
 		if (!rank)
-			printf("%s n e [in] [out]\n", argv[0]);        
+			printf("%s n e [in] [out]\n", argv[0]);
 		MPI_Finalize();
 		return 1;
 	}
@@ -220,22 +231,26 @@ int main(int argc, char **argv)
 	if (init(argc, argv, &n, &e))
 		return 0;
 	
-	double time[2], timeMAX[2];
-	complexd *A = (argc > 3) ? read(argv[3], &n) : gen(n);
-	
+	double time[3], timeMAX[3];
 	MPI_Barrier(MPI_COMM_WORLD);
 	time[0] = MPI_Wtime();
-	complexd *B = adam(A, n, e);
+	complexd *A = (argc > 3) ? read(argv[3], &n) : gen(n);
 	time[0] = MPI_Wtime() - time[0];
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	time[1] = MPI_Wtime();
-	complexd *C = adam(A, n, 0.0);
+	complexd *B = adam(A, n, e);
 	time[1] = MPI_Wtime() - time[1];
+	
+	complexd *C = adam(A, n, 0.0);
 	
 	free(A);
 	
+	MPI_Barrier(MPI_COMM_WORLD);
+	time[2] = MPI_Wtime();
 	double lost = abs(dot(B, C, n));
+	time[2] = MPI_Wtime() - time[2];
+	
 	lost = 1.0 - lost * lost;
 	if (lost < 0.0)
 		lost = 0.0;
@@ -244,12 +259,12 @@ int main(int argc, char **argv)
 		write(argv[4], B, n);
 	free(B);
 	free(C);
-	
 	MPI_Reduce(time, timeMAX, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	MPI_Reduce(time+1, timeMAX+1, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	MPI_Reduce(time+2, timeMAX+2, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	if (!rank)
-		printf("~%d\t%d\t%d\t%lg\t[%lf]\t%lf\n",
-			size, threads, n, e, lost, timeMAX[1]);
+		printf("~%d\t%d\t%d\t%lg\t%lf\t|\t%lf\t%lf\t%lf\n",
+			size, threads, n, e, lost, timeMAX[0], timeMAX[1], timeMAX[2]);
 	
 	MPI_Finalize();
 	return 0;
