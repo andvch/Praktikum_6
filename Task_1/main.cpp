@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
 	
 	char* x = getenv("OMP_NUM_THREADS");
 	cout << '~' << n << '\t' << k << '\t' << ((x != NULL) ? x : "1") << '\t' << t1 - t0 << '\t' << t2 - t1 << endl;
-	free(A);
-	free(B);
+	delete [] A;
+	delete [] B;
 	return 0;
 	
 }

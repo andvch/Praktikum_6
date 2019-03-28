@@ -91,7 +91,7 @@ complexd* f(complexd *A, complexd *P, int k) {
 			for (i = 0; i < m; ++i)
 				B[i] = P[2]*A1[i] + P[3]*A[i];
 		}
-		free(A1);
+		delete [] A1;
 		
 	}
 	
@@ -155,10 +155,10 @@ int main(int argc, char **argv) {
 	time[1] = MPI_Wtime();
 	complexd *B = f(A, P, k);
 	time[1] = MPI_Wtime() - time[1];
-	free(A);
+	delete [] A;
 	
 	if (argc > 4) write(argv[4], B);
-	free(B);
+	delete [] B;
 	
 	MPI_Reduce(time, timeMAX, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	MPI_Reduce(time+1, timeMAX+1, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);

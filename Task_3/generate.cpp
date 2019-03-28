@@ -59,6 +59,7 @@ int main(int argc, char **argv)
 	
 	MPI_File_write(file, d, k, MPI_DOUBLE, MPI_STATUS_IGNORE);
 	
+	delete [] d;
 	MPI_File_close(&file);
 	MPI_Finalize();
 	return 0;

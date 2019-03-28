@@ -85,7 +85,7 @@ complexd* read(char *f, int *n)
 	return A;
 }
 
-complexd *quant(complexd *A, complexd *B, int n, int k, complexd *P, complexd *BUF)
+void quant(complexd *A, complexd *B, int n, int k, complexd *P, complexd *BUF)
 {
 	uint64 m = num_of_doubles(n);
 	if (k > log_size) {
@@ -113,7 +113,6 @@ complexd *quant(complexd *A, complexd *B, int n, int k, complexd *P, complexd *B
 			}
 		}
 	}
-	return B;
 }
 
 double normal_dis_gen(unsigned int *seed)
@@ -149,8 +148,8 @@ complexd *adam(complexd *A, int n, double e)
 		B = C;
 		C = T;
 	}
-	free(C);
-	free(buf);
+	delete [] C;
+	delete [] buf;
 	return B;
 }
 
@@ -244,7 +243,7 @@ int main(int argc, char **argv)
 	
 	complexd *C = adam(A, n, 0.0);
 	
-	free(A);
+	delete [] A;
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	time[2] = MPI_Wtime();
@@ -257,11 +256,9 @@ int main(int argc, char **argv)
 	
 	if (argc > 4)
 		write(argv[4], B, n);
-	free(B);
-	free(C);
-	MPI_Reduce(time, timeMAX, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-	MPI_Reduce(time+1, timeMAX+1, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-	MPI_Reduce(time+2, timeMAX+2, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	delete [] B;
+	delete [] C;
+	MPI_Reduce(time, timeMAX, 3, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	if (!rank)
 		printf("~%d\t%d\t%d\t%lg\t%lf\t|\t%lf\t%lf\t%lf\n",
 			size, threads, n, e, lost, timeMAX[0], timeMAX[1], timeMAX[2]);
