@@ -4,9 +4,7 @@
 #include <mpi.h>
 #include <omp.h>
 
-using namespace std;
-
-typedef complex<double> complexd;
+typedef std::complex<double> complexd;
 typedef unsigned long long uint64;
 
 static int rank, size, log_size, threads;
