@@ -28,6 +28,8 @@ int main(int argc, char **argv)
 	int t, k[2];
 	double a;
 	if (!rank) {
+		printf("%d processes, %d threads\n\n",
+			QU::details::size, QU::details::threads);
 		printf("Choose transformation\n");
 		printf("1\tHadamard\n2\tnHadamard\n3\tR\n4\tNOT\n5\tCNOT\n6\tCR\n");
 		if (scanf("%u", &t) != 1)

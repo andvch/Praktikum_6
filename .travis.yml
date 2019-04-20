@@ -1,0 +1,17 @@
+sudo: required
+
+language: cpp
+
+services:
+- docker
+
+arch:
+  packages:
+  - openmpi
+  - cpplint
+  script:
+  - cd ./Task_4
+  - make && make test && make lint
+
+script:
+  - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
