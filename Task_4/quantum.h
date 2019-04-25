@@ -121,14 +121,14 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 			tmP0 = ~((~0LLU) << (n - log_size));
 
 		#pragma omp for schedule(guided)
-		for (uint64 j = 0; j < m; ++j) {
+		for(uint64 j = 0; j < m; ++j) {
 			tmp = (tmp0 ^ j) & ~masks[l-1];
-			for (uint z = 0; z < l; ++z) {
+			for  (uint z = 0; z < l; ++z) {
 				num = tmp ^ masks[z];
 				id0 = num >> (n - log_size);
 				id1 = num & tmP0;
 				if (id0 == (uint) rank) {
-					vec[z] = A[id1];
+				vec[z] = A[id1];
 					if (id1 == j)
 						x = z;
 				} else {
@@ -177,18 +177,17 @@ static inline complexd* gen(uint n, int *status = nullptr)
 		#pragma omp for schedule(guided)
 		for (uint64 i = 0; i < m; ++i) {
 			A[i].real(rand_r(&seed) / static_cast<float>(RAND_MAX) - 0.5f);
-			A[i].imag(rand_r(&seed) / static_cast<float>(RAND_MAX) - 0.5f);
+		   A[i].imag(rand_r(&seed) / static_cast<float>(RAND_MAX) - 0.5f);
 			sqr += abs(A[i] * A[i]);
 		}
 	}
-	MPI_Reduce(&sqr, &module, 1, MPI_DOUBLE, MPI_SUM, 0,
+	MPI_Reduce (&sqr, &module, 1, MPI_DOUBLE, MPI_SUM, 0,
 		MPI_COMM_WORLD);
-	if (!details::rank)
+	if(!details::rank)
 		module = sqrt(module);
 	MPI_Bcast(&module, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	#pragma omp parallel for schedule(guided)
-	for (uint64 i = 0; i < m; ++i) {
-		A[i] /= module;
+	for (uint64 i = 0; i < m; ++i) { A[i] /= module;
 	}
 	return A;
 }
@@ -217,12 +216,12 @@ static inline complexd* read(const char *f, int *n,
 			MPI_UNSIGNED_CHAR, MPI_STATUS_IGNORE);
 	MPI_Bcast(n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	uint64 m = details::num_of_doubles(*n);
-	if (m == 0) {
+	if (m ==  0) {
 		MPI_File_close(&file);
 		*status = 3;
 		return NULL;
 	}
-	complexd *A = new complexd[m];
+	complexd *A =new complexd[m];
 	MPI_File_seek(file,
 		sizeof(unsigned char) + m * sizeof(complexd) * details::rank,
 		MPI_SEEK_SET);
