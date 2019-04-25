@@ -117,8 +117,8 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 		complexd *vec = new complexd[l];
 		uint x = 0, id0;			// P line number, rank id
 		uint64 tmp, num, id1;		// element number, local id
-		const uint64 tmp0 = rank << (n - log_size),
-			tmP0 = ~((~0LLU) << (n - log_size));
+		const uint64 tmP0 = rank << (n - log_size),
+			tmp0 = ~((~0LLU) << (n - log_size));
 
 		#pragma omp for schedule(guided)
 		for (uint64 j = 0; j < m; ++j) {
