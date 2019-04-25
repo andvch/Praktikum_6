@@ -15,8 +15,9 @@ test: main equals
 		echo -n -e "$$way \t" ; \
 		for i in $(I); do \
 			for j in $(J); do \
-				OMP_NUM_THREADS=$$j mpirun -n $$i ./main \
-					$$way/A.dat $$way/C.dat < $$way/in.txt > /dev/null ; \
+				OMP_NUM_THREADS=$$j mpirun -n $$i --oversubscribe \
+					./main $$way/A.dat $$way/C.dat < $$way/in.txt \
+					> /dev/null ; \
 				x=`./equals $$way/B.dat $$way/C.dat` ; \
 				if [[ $$x != 1 ]]; then \
 					rm $$way/C.dat ; \

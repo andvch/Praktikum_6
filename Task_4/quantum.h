@@ -98,10 +98,10 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 	uint64 *masks = get_masks<uint64>(i, k, n);
 	uint *ranks = get_ranks(i, k);
 
-	bool flag = false;
+	bool create_buf_flag = false;
 	if ((BUF == nullptr) && (ranks[0] > 0)) {
 		BUF = new complexd[m*ranks[0]];
-		flag = true;
+		create_buf_flag  = true;
 	}
 
 	std::map<uint, uint> rank2id;
@@ -118,7 +118,7 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 		uint x = 0, id0;			// P line number, rank id
 		uint64 tmp, num, id1;		// element number, local id
 		const uint64 tmp0 = rank << (n - log_size),
-			tmP0 = ~((~0LLU) << (n - log_size));
+			tmp1 = ~((~0LLU) << (n - log_size));
 
 		#pragma omp for schedule(guided)
 		for (uint64 j = 0; j < m; ++j) {
@@ -126,7 +126,7 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 			for (uint z = 0; z < l; ++z) {
 				num = tmp ^ masks[z];
 				id0 = num >> (n - log_size);
-				id1 = num & tmP0;
+				id1 = num & tmp1;
 				if (id0 == (uint) rank) {
 					vec[z] = A[id1];
 					if (id1 == j)
@@ -143,7 +143,7 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 		delete [] vec;
 	}
 
-	if (flag)
+	if (create_buf_flag)
 		delete [] BUF;
 	delete [] masks;
 	delete [] ranks;
