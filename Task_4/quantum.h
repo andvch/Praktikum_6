@@ -125,8 +125,8 @@ static inline int trans(const complexd *A, complexd *B, uint n,
 			tmp = (tmp0 ^ j) & ~masks[l-1];
 			for (uint z = 0; z < l; ++z) {
 				num = tmp ^ masks[z];
-				id0 = num >> (n - log_size);
-				id1 = num & tmP0;
+				id1 = num >> (n - log_size);
+				id0 = num & tmP0;
 				if (id0 == (uint) rank) {
 					vec[z] = A[id1];
 					if (id1 == j)
