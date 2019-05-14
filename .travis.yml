@@ -12,6 +12,8 @@ arch:
   script:
   - cd ./Task_4
   - make && make test && make lint
+  - cd ../Task_5
+  - make && make test && make lint
 
 script:
   - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
