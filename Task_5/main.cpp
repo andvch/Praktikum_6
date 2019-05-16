@@ -50,6 +50,21 @@ int main(int argc, char **argv)
 		printf("~%d\t%d\t%d\t%lf\n",
 			n, QU::details::size, QU::details::threads, timeMAX);
 
+	QU::complexd P0[] = {1, 0, 0, 0};
+	QU::complexd P1[] = {0, 0, 1, 0};
+	QU::complexd P2[] = {0, 1, 0, 0};
+	QU::complexd P3[] = {0, 0, 0, 1};
+	QU::complexd *P[] = {P0, P1, P2, P3};
+	QU::uint k[2];
+	for (i = 0; i < n / 2; ++i) {
+		k[0] = i + 1;
+		k[1] = n - i;
+		B = QU::transformation(A, n, 2, P, k, &status);
+		CHECK_ERRORS
+		delete [] A;
+		A = B;
+	}
+
 	if (argc > 3) {
 		status = QU::write(argv[3], A, n);
 		CHECK_ERRORS
